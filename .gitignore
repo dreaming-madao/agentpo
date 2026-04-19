@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.Python
+
+# Virtual environments
+.env
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# ML / training artifacts
+wandb/
+runs/
+checkpoints/
+*.ckpt
+tensorboard/
+
+# Local data & large files (keep datasets outside the repo)
+/data/
+
+# OS
+.DS_Store
+Thumbs.db

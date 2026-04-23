@@ -51,7 +51,7 @@ def get_custom_reward_fn(config):
     return getattr(module, function_name)
 
 
-@hydra.main(config_path="config", config_name="dapo_trainer", version_base=None)
+@hydra.main(config_path="../verl/recipe/dapo/config", config_name="dapo_trainer", version_base=None)
 def main(config):
     run_ppo(config)
 
@@ -60,7 +60,16 @@ def run_ppo(config) -> None:
     if not ray.is_initialized():
         # this is for local ray cluster
         ray.init(
-            runtime_env={"env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN", "VLLM_LOGGING_LEVEL": "WARN"}},
+            runtime_env={
+                "env_vars": {
+                    "TOKENIZERS_PARALLELISM": "true",
+                    "NCCL_DEBUG": "WARN",
+                    "VLLM_LOGGING_LEVEL": "WARN",
+                    "VLLM_USE_V1": os.environ.get("VLLM_USE_V1", "0"),
+                    "DEBUG_RAY_WORKER": os.environ.get("DEBUG_RAY_WORKER", "0"),
+                    "DEBUG_RAY_WORKER_PORT": os.environ.get("DEBUG_RAY_WORKER_PORT", "5678"),
+                }
+            },
             num_cpus=config.ray_init.num_cpus,
         )
 
@@ -71,6 +80,17 @@ def run_ppo(config) -> None:
 @ray.remote(num_cpus=1)  # please make sure main_task is not scheduled on head
 class TaskRunner:
     def run(self, config):
+        if os.environ.get("DEBUG_RAY_WORKER") == "1":
+            try:
+                import debugpy
+
+                port = int(os.environ.get("DEBUG_RAY_WORKER_PORT", "5678"))
+                debugpy.listen(("0.0.0.0", port))
+                print(f"Ray TaskRunner waiting for debugger on port {port}", flush=True)
+                debugpy.wait_for_client()
+            except ModuleNotFoundError:
+                print("DEBUG_RAY_WORKER=1 but debugpy is not installed; continuing without debugger.", flush=True)
+
         # print initial config
         from pprint import pprint
 

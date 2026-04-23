@@ -16,9 +16,19 @@ import re
 import regex
 from typing import Optional
 from verl.utils.reward_score.math import is_equiv
-from math_verify.errors import TimeoutException
-from math_verify.metric import math_metric
-from math_verify.parser import ExprExtractionConfig, LatexExtractionConfig
+
+try:
+    from math_verify.errors import TimeoutException
+    from math_verify.metric import math_metric
+    from math_verify.parser import ExprExtractionConfig, LatexExtractionConfig
+
+    HAS_MATH_VERIFY = True
+except ImportError:
+    TimeoutException = Exception
+    math_metric = None
+    ExprExtractionConfig = None
+    LatexExtractionConfig = None
+    HAS_MATH_VERIFY = False
 
 
 # ---------------------------------- #
@@ -172,6 +182,9 @@ def normalize_final_answer(final_answer: str) -> str:
 
 
 def is_equal(model_output: str, ground_truth: str, timeout_score: float = 0) -> bool:
+    if not HAS_MATH_VERIFY:
+        return False
+
     verify_func = math_metric(
         gold_extraction_target=(LatexExtractionConfig(),),
         pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig()),
@@ -214,13 +227,15 @@ def is_correct_minerva(solution_str: str, gt: str, gt_need_extract: bool = False
 
     # Process ground truth
     try:
-        is_correct=is_equal(solution_str,gt)
-    except:
+        is_correct = is_equal(solution_str, gt)
+        if not HAS_MATH_VERIFY:
+            raise ImportError("math_verify is unavailable")
+    except Exception:
         if gt_need_extract:
             gt = normalize_final_answer(remove_boxed(last_boxed_only_string(gt)))
         else:
             gt = normalize_final_answer(gt)
-        is_correct=pred == gt
+        is_correct = pred == gt or is_equiv(pred, gt)
         
     return is_correct, pred
 

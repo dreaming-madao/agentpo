@@ -1,0 +1,85 @@
+{"uuid": "583ea18d-1f23-43ee-a5f8-6dd613827002", "provider": "UNKNOWN", "num_cpu": 128, "cpu_type": "Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60GHz", "cpu_family_model_stepping": "6,106,6", "total_memory": 1081595432960, "architecture": "x86_64", "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.35", "cuda_runtime": "12.4", "gpu_count": 1, "gpu_type": "NVIDIA A100 80GB PCIe", "gpu_memory_per_device": 85094825984, "env_var_json": "{\"VLLM_USE_MODELSCOPE\": false, \"VLLM_USE_TRITON_FLASH_ATTN\": true, \"VLLM_ATTENTION_BACKEND\": null, \"VLLM_USE_FLASHINFER_SAMPLER\": null, \"VLLM_PP_LAYER_PARTITION\": null, \"VLLM_USE_TRITON_AWQ\": false, \"VLLM_USE_V1\": true, \"VLLM_ENABLE_V1_MULTIPROCESSING\": false}", "model_architecture": "Qwen2ForCausalLM", "vllm_version": "0.8.5.post1", "context": "ENGINE_CONTEXT", "log_time": 1776761141679938048, "source": "production", "dtype": "torch.bfloat16", "tensor_parallel_size": 2, "block_size": 16, "gpu_memory_utilization": 0.6, "quantization": null, "kv_cache_dtype": "auto", "enable_lora": false, "enable_prompt_adapter": false, "enable_prefix_caching": true, "enforce_eager": true, "disable_custom_all_reduce": true}
+{"uuid": "eb98f4b0-1e60-4376-9020-2f0549b5736a", "provider": "UNKNOWN", "num_cpu": 128, "cpu_type": "Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60GHz", "cpu_family_model_stepping": "6,106,6", "total_memory": 1081595432960, "architecture": "x86_64", "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.35", "cuda_runtime": "12.4", "gpu_count": 1, "gpu_type": "NVIDIA A100 80GB PCIe", "gpu_memory_per_device": 85094825984, "env_var_json": "{\"VLLM_USE_MODELSCOPE\": false, \"VLLM_USE_TRITON_FLASH_ATTN\": true, \"VLLM_ATTENTION_BACKEND\": null, \"VLLM_USE_FLASHINFER_SAMPLER\": null, \"VLLM_PP_LAYER_PARTITION\": null, \"VLLM_USE_TRITON_AWQ\": false, \"VLLM_USE_V1\": true, \"VLLM_ENABLE_V1_MULTIPROCESSING\": false}", "model_architecture": "Qwen2ForCausalLM", "vllm_version": "0.8.5.post1", "context": "ENGINE_CONTEXT", "log_time": 1776762131625199104, "source": "production", "dtype": "torch.bfloat16", "tensor_parallel_size": 2, "block_size": 16, "gpu_memory_utilization": 0.6, "quantization": null, "kv_cache_dtype": "auto", "enable_lora": false, "enable_prompt_adapter": false, "enable_prefix_caching": true, "enforce_eager": true, "disable_custom_all_reduce": true}
+{"uuid": "0b6b3cf6-bfea-4e1c-b3a7-d6e8c0304f8f", "provider": "UNKNOWN", "num_cpu": 128, "cpu_type": "Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60GHz", "cpu_family_model_stepping": "6,106,6", "total_memory": 1081595432960, "architecture": "x86_64", "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.35", "cuda_runtime": "12.4", "gpu_count": 1, "gpu_type": "NVIDIA A100 80GB PCIe", "gpu_memory_per_device": 85094825984, "env_var_json": "{\"VLLM_USE_MODELSCOPE\": false, \"VLLM_USE_TRITON_FLASH_ATTN\": true, \"VLLM_ATTENTION_BACKEND\": null, \"VLLM_USE_FLASHINFER_SAMPLER\": null, \"VLLM_PP_LAYER_PARTITION\": null, \"VLLM_USE_TRITON_AWQ\": false, \"VLLM_USE_V1\": true, \"VLLM_ENABLE_V1_MULTIPROCESSING\": false}", "model_architecture": "Qwen2ForCausalLM", "vllm_version": "0.8.5.post1", "context": "ENGINE_CONTEXT", "log_time": 1776773036407116032, "source": "production", "dtype": "torch.bfloat16", "tensor_parallel_size": 1, "block_size": 16, "gpu_memory_utilization": 0.6, "quantization": null, "kv_cache_dtype": "auto", "enable_lora": false, "enable_prompt_adapter": false, "enable_prefix_caching": true, "enforce_eager": true, "disable_custom_all_reduce": true}
+{"uuid": "0b6b3cf6-bfea-4e1c-b3a7-d6e8c0304f8f", "log_time": 1776773637250125824}
+{"uuid": "2464a8e5-09e4-4093-a4a1-c038fa2a11b5", "provider": "UNKNOWN", "num_cpu": 128, "cpu_type": "Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60GHz", "cpu_family_model_stepping": "6,106,6", "total_memory": 1081595432960, "architecture": "x86_64", "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.35", "cuda_runtime": "12.4", "gpu_count": 1, "gpu_type": "NVIDIA A100 80GB PCIe", "gpu_memory_per_device": 85094825984, "env_var_json": "{\"VLLM_USE_MODELSCOPE\": false, \"VLLM_USE_TRITON_FLASH_ATTN\": true, \"VLLM_ATTENTION_BACKEND\": null, \"VLLM_USE_FLASHINFER_SAMPLER\": null, \"VLLM_PP_LAYER_PARTITION\": null, \"VLLM_USE_TRITON_AWQ\": false, \"VLLM_USE_V1\": true, \"VLLM_ENABLE_V1_MULTIPROCESSING\": false}", "model_architecture": "Qwen2ForCausalLM", "vllm_version": "0.8.5.post1", "context": "ENGINE_CONTEXT", "log_time": 1776773913652625920, "source": "production", "dtype": "torch.bfloat16", "tensor_parallel_size": 1, "block_size": 16, "gpu_memory_utilization": 0.6, "quantization": null, "kv_cache_dtype": "auto", "enable_lora": false, "enable_prompt_adapter": false, "enable_prefix_caching": true, "enforce_eager": true, "disable_custom_all_reduce": true}
+{"uuid": "2464a8e5-09e4-4093-a4a1-c038fa2a11b5", "log_time": 1776774514781673984}
+{"uuid": "2464a8e5-09e4-4093-a4a1-c038fa2a11b5", "log_time": 1776775116085805056}
+{"uuid": "2464a8e5-09e4-4093-a4a1-c038fa2a11b5", "log_time": 1776775716721060096}
+{"uuid": "fba62b9c-2491-489e-b419-3e93c0a28ecc", "provider": "UNKNOWN", "num_cpu": 128, "cpu_type": "Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60GHz", "cpu_family_model_stepping": "6,106,6", "total_memory": 1081595432960, "architecture": "x86_64", "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.35", "cuda_runtime": "12.4", "gpu_count": 1, "gpu_type": "NVIDIA A100 80GB PCIe", "gpu_memory_per_device": 85094825984, "env_var_json": "{\"VLLM_USE_MODELSCOPE\": false, \"VLLM_USE_TRITON_FLASH_ATTN\": true, \"VLLM_ATTENTION_BACKEND\": null, \"VLLM_USE_FLASHINFER_SAMPLER\": null, \"VLLM_PP_LAYER_PARTITION\": null, \"VLLM_USE_TRITON_AWQ\": false, \"VLLM_USE_V1\": true, \"VLLM_ENABLE_V1_MULTIPROCESSING\": false}", "model_architecture": "Qwen2ForCausalLM", "vllm_version": "0.8.5.post1", "context": "ENGINE_CONTEXT", "log_time": 1776776252857774848, "source": "production", "dtype": "torch.bfloat16", "tensor_parallel_size": 1, "block_size": 16, "gpu_memory_utilization": 0.6, "quantization": null, "kv_cache_dtype": "auto", "enable_lora": false, "enable_prompt_adapter": false, "enable_prefix_caching": true, "enforce_eager": true, "disable_custom_all_reduce": true}
+{"uuid": "fba62b9c-2491-489e-b419-3e93c0a28ecc", "log_time": 1776776853642988800}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "provider": "UNKNOWN", "num_cpu": 128, "cpu_type": "Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60GHz", "cpu_family_model_stepping": "6,106,6", "total_memory": 1081595432960, "architecture": "x86_64", "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.35", "cuda_runtime": "12.4", "gpu_count": 1, "gpu_type": "NVIDIA A100 80GB PCIe", "gpu_memory_per_device": 85094825984, "env_var_json": "{\"VLLM_USE_MODELSCOPE\": false, \"VLLM_USE_TRITON_FLASH_ATTN\": true, \"VLLM_ATTENTION_BACKEND\": null, \"VLLM_USE_FLASHINFER_SAMPLER\": null, \"VLLM_PP_LAYER_PARTITION\": null, \"VLLM_USE_TRITON_AWQ\": false, \"VLLM_USE_V1\": false, \"VLLM_ENABLE_V1_MULTIPROCESSING\": false}", "model_architecture": "Qwen2ForCausalLM", "vllm_version": "0.8.5.post1", "context": "LLM_CLASS", "log_time": 1776777470673651968, "source": "production", "dtype": "torch.bfloat16", "tensor_parallel_size": 1, "block_size": 16, "gpu_memory_utilization": 0.6, "quantization": null, "kv_cache_dtype": "auto", "enable_lora": false, "enable_prompt_adapter": false, "enable_prefix_caching": true, "enforce_eager": true, "disable_custom_all_reduce": true}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776778072023681024}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776778672676069120}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776779273341872896}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "provider": "UNKNOWN", "num_cpu": 128, "cpu_type": "Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60GHz", "cpu_family_model_stepping": "6,106,6", "total_memory": 1081595432960, "architecture": "x86_64", "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.35", "cuda_runtime": "12.4", "gpu_count": 1, "gpu_type": "NVIDIA A100 80GB PCIe", "gpu_memory_per_device": 85094825984, "env_var_json": "{\"VLLM_USE_MODELSCOPE\": false, \"VLLM_USE_TRITON_FLASH_ATTN\": true, \"VLLM_ATTENTION_BACKEND\": null, \"VLLM_USE_FLASHINFER_SAMPLER\": null, \"VLLM_PP_LAYER_PARTITION\": null, \"VLLM_USE_TRITON_AWQ\": false, \"VLLM_USE_V1\": false, \"VLLM_ENABLE_V1_MULTIPROCESSING\": false}", "model_architecture": "Qwen2ForCausalLM", "vllm_version": "0.8.5.post1", "context": "LLM_CLASS", "log_time": 1776779623193401088, "source": "production", "dtype": "torch.bfloat16", "tensor_parallel_size": 1, "block_size": 16, "gpu_memory_utilization": 0.6, "quantization": null, "kv_cache_dtype": "auto", "enable_lora": false, "enable_prompt_adapter": false, "enable_prefix_caching": true, "enforce_eager": true, "disable_custom_all_reduce": true}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776779875095582976}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776780224590651136}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776780475678643968}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776780825234350080}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776781076262407936}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776781425933779968}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776781676921952000}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776782026572091136}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776782277529701888}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776782627247334912}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776782878162846208}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776783227928983808}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776783478984424192}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776783828939828992}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776784079618081024}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776784429571301888}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776784680335744000}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776785030199547904}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776785280954237952}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776785630846951936}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776785881570254080}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776786232038609920}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776786482770055936}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776786832685789184}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776787083602736896}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776787433305660928}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776787684179622912}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776788033906321920}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776788285073404160}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776788634527927040}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776788885649949184}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776789235130259968}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776789486257285120}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776789835724881920}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776790086851352064}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776790436474277120}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776790687443954944}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776791037095927040}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776791288020561920}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776791637737318144}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776791888600984064}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776792238370891008}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776792489234419200}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776792838997716992}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776793089859026944}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776793439626513920}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776793690477122048}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776794040241506048}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776794291067141888}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776794640951705088}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776794891661520896}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776795241563042048}
+{"uuid": "523f2bb1-b78d-4fe7-94a3-cd527b0c62e2", "log_time": 1776795492294290176}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776795842216627968}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776796442802588928}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776797043422617856}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776797644032811008}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776798244655209984}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776798845253957120}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776799446214662144}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776800046853604096}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776800647466248960}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776801248071944960}
+{"uuid": "f14e8b0a-cc30-4ab1-9eb2-c52feb0a231a", "log_time": 1776801848702959104}
+{"uuid": "25d9dda1-9581-4605-b783-78b035e4d28f", "provider": "UNKNOWN", "num_cpu": 128, "cpu_type": "Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60GHz", "cpu_family_model_stepping": "6,106,6", "total_memory": 1081595432960, "architecture": "x86_64", "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.35", "cuda_runtime": "12.4", "gpu_count": 1, "gpu_type": "NVIDIA A100 80GB PCIe", "gpu_memory_per_device": 85094825984, "env_var_json": "{\"VLLM_USE_MODELSCOPE\": false, \"VLLM_USE_TRITON_FLASH_ATTN\": true, \"VLLM_ATTENTION_BACKEND\": null, \"VLLM_USE_FLASHINFER_SAMPLER\": null, \"VLLM_PP_LAYER_PARTITION\": null, \"VLLM_USE_TRITON_AWQ\": false, \"VLLM_USE_V1\": false, \"VLLM_ENABLE_V1_MULTIPROCESSING\": false}", "model_architecture": "Qwen2ForCausalLM", "vllm_version": "0.8.5.post1", "context": "LLM_CLASS", "log_time": 1776823347559734016, "source": "production", "dtype": "torch.bfloat16", "tensor_parallel_size": 1, "block_size": 16, "gpu_memory_utilization": 0.6, "quantization": null, "kv_cache_dtype": "auto", "enable_lora": false, "enable_prompt_adapter": false, "enable_prefix_caching": true, "enforce_eager": true, "disable_custom_all_reduce": true}
+{"uuid": "25d9dda1-9581-4605-b783-78b035e4d28f", "log_time": 1776823948860636928}
+{"uuid": "25d9dda1-9581-4605-b783-78b035e4d28f", "log_time": 1776824549468514816}
+{"uuid": "25d9dda1-9581-4605-b783-78b035e4d28f", "log_time": 1776825150087832064}
+{"uuid": "25d9dda1-9581-4605-b783-78b035e4d28f", "log_time": 1776825750785032960}
+{"uuid": "25d9dda1-9581-4605-b783-78b035e4d28f", "log_time": 1776826351446862848}

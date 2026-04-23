@@ -4,9 +4,14 @@ You can install the required packages with the following command:
 cd latex2sympy
 pip install -e .
 cd ..
-pip install -r requirements.txt 
+# pip install -r requirements.txt 
+# pip install vllm==0.5.1 --no-build-isolation
+# pip install transformers==4.42.3
+pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
+MAX_JOBS=4 pip install flash-attn --no-build-isolation
 pip install vllm==0.5.1 --no-build-isolation
 pip install transformers==4.42.3
+pip install -r requirements.txt
 ```
 
 ### Evaluation

@@ -6,7 +6,7 @@ llm_model_dict = {
     "Qwen2.5-7b": "http://174.34.106.20:10004/v1",
     "Qwen3-4b": "http://174.34.106.20:10003/v1",
     "Llama-3.1-8B": "http://174.34.106.20:10003/v1",
-    "Llama-3.2-3B": "http://174.34.106.21:10005/v1",
+    "Llama-3.2-3B": "http://127.0.0.1:10005/v1",
     "aliyuncs-api": "https://vpc-cn-beijing.dashscope.aliyuncs.com/compatible-mode/v1",
 }
 

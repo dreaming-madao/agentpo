@@ -18,7 +18,7 @@ import torch
 from openai import OpenAI
 from verl import DataProto
 from verl.utils.reward_score import _default_compute_score
-from llm_fn import llm_model_dict, configs, local_model_list
+from .llm_fn import llm_model_dict, configs, local_model_list
 
 def get_solution(prompt_lst, actor_model,cooperation_mode):
     if actor_model in local_model_list:
@@ -101,13 +101,16 @@ class AgentPORewardManager:
     def __call__(self, data: DataProto, return_dict: bool = False):
         """We will expand this function gradually based on the available datasets"""
 
-        # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
+        # If an upstream reward model has already produced scores, reuse them directly.
         if "rm_scores" in data.batch.keys():
             if return_dict:
                 return {"reward_tensor": data.batch["rm_scores"]}
             else:
                 return data.batch["rm_scores"]
 
+        # verl expects token-level rewards, so we create a tensor with the same
+        # shape as responses and later place the sequence-level reward on the
+        # final valid response token.
         reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
         reward_extra_info = defaultdict(list)
 
@@ -115,6 +118,9 @@ class AgentPORewardManager:
         res_lst,prompt_lst=[],[]
         for i in range(len(data)):
             data_item = data[i]  # DataProtoItem
+
+            # Split prompt/response token ids and remove padding according to
+            # the attention mask before decoding them back to text.
             prompt_ids = data_item.batch["prompts"]
             prompt_length = prompt_ids.shape[-1]
             valid_prompt_length = data_item.batch["attention_mask"][:prompt_length].sum()
@@ -128,14 +134,20 @@ class AgentPORewardManager:
             eos_token = self.tokenizer.eos_token
             if response_str.endswith(eos_token):
                 response_str = response_str[: -len(eos_token)]
+
+            # Metadata comes from the parquet row and is needed for scoring and
+            # for building the collaborator prompt.
             ground_truth = data_item.non_tensor_batch["reward_model"]["ground_truth"]
             data_source = data_item.non_tensor_batch[self.reward_fn_key]
             extra_info = data_item.non_tensor_batch.get("extra_info", None)
 
             problem = data_item.non_tensor_batch["problem"]
 
-            res_lst.append([prompt_str,data_source,ground_truth,extra_info])
+            res_lst.append([prompt_str,data_source,ground_truth,extra_info,valid_response_length])
 
+            # In assistant mode, the actor's response is treated as a hint for
+            # the collaborator model. In critic mode, it is treated as feedback
+            # on an existing solution.
             if self.cooperation_mode=="assistant":
                 prompt=f"Problem: {problem} (Hint: {response_str})"
 
@@ -147,13 +159,16 @@ class AgentPORewardManager:
                 raise RuntimeError(f"cooperation_mode is not defined.")
             
             prompt_lst.append(prompt)
-           
+
+        # Ask the configured collaborator model/API to produce final solutions
+        # from the AgentPO prompts built above.
         response_str_lst=get_solution(prompt_lst, self.actor_model,self.cooperation_mode)
 
         for i, res in enumerate(res_lst):
-            prompt_str,data_source,ground_truth,extra_info=res
+            prompt_str,data_source,ground_truth,extra_info,valid_response_length=res
             response_str=response_str_lst[i]
 
+            # Convert the collaborator's final answer into a scalar score.
             result = self.compute_score(
                 data_source=data_source,
                 solution_str=response_str,
@@ -170,11 +185,14 @@ class AgentPORewardManager:
                 score = result
 
             reward = score
+            # Put the sequence reward on the last valid token so downstream
+            # PPO/GRPO code can consume it as token-level rewards.
             reward_tensor[i, valid_response_length - 1] = reward
 
             if data_source not in already_print_data_sources:
                 already_print_data_sources[data_source] = 0
 
+            # Optionally print a few decoded samples for manual inspection.
             if already_print_data_sources[data_source] < self.num_examine:
                 already_print_data_sources[data_source] += 1
                 print("[prompt]", prompt_str)
@@ -186,6 +204,8 @@ class AgentPORewardManager:
                 else:
                     print("[score]", score)
 
+        # Training asks for both the reward tensor and logging extras, while
+        # validation may only need the reward tensor.
         if return_dict:
             return {
                 "reward_tensor": reward_tensor,

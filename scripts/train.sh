@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+export PYTHONPATH=/home/ly/agentpo:$PYTHONPATH
+export HF_HOME=/mnt/huawei/leiy/hug
+export HF_HUB_CACHE=/mnt/huawei/leiy/hug/hub
+export HF_ASSETS_CACHE=/mnt/huawei/leiy/hug/assets
+export HF_TOKEN_PATH=/mnt/huawei/leiy/hug/token
+export VLLM_USE_V1=0
 project_name='AgentPO'
 exp_name='assistant_Qwen2.5-3B_Llama-3.2-3B_500'
 
@@ -19,7 +25,6 @@ overlong_buffer_len=$((1024 * 4))
 overlong_penalty_factor=1.0
 
 loss_agg_mode="token-mean"
-
 enable_filter_groups=False
 filter_groups_metric=acc
 max_num_gen_batches=10
@@ -32,15 +37,18 @@ train_prompt_mini_bsz=4
 NNODES=1
 
 # Paths
-HOME="/home/sunl/agentpo"
+HOME="/home/ly/agentpo"
+REPO_ROOT="/home/ly/agentpo"
+CKPT_ROOT="/mnt/huawei/leiy/checkpoints/agentpo"
 
 ## model
 # MODEL_PATH=$HOME/ckpts/Qwen_Qwen2.5-Math-7B
-MODEL_PATH=$HOME/ckpts/Qwen_Qwen2.5-3B-Instruct
+MODEL_PATH="Qwen/Qwen2.5-3B-Instruct"
 # MODEL_PATH=$HOME/ckpts/Qwen_Qwen2.5-Math-1.5B
 # MODEL_PATH=$HOME/ckpts/unsloth_Llama-3.2-3B-Instruct
 
-CKPTS_DIR=$HOME/runs/$project_name/$exp_name
+# CKPTS_DIR=$HOME/runs/$project_name/$exp_name
+CKPTS_DIR=${CKPT_ROOT}/${project_name}/${exp_name}
 
 ## data
 # math_train_hard1000_path=$HOME/data/math8k/math8k_hard_1000.parquet
@@ -58,12 +66,13 @@ top_k=-1 # 0 for HF rollout, -1 for vLLM rollout
 val_top_p=0.7
 
 # Performance Related Parameter
-sp_size=2
+n_gpus_per_node=1
+sp_size=1
 use_dynamic_bsz=True
 actor_ppo_max_token_len=$((max_prompt_length + max_response_length))
 infer_ppo_max_token_len=$((max_prompt_length + max_response_length))
 offload=True
-gen_tp=2
+gen_tp=1
 
 # add focal weight
 dataset_num=500
@@ -72,6 +81,11 @@ actor_model=Llama-3.2-3B # Llama-3.2-3B Llama-3.1-8B, Qwen2.5-7b, Qwen3-4b, Qwen
 cooperation_mode=assistant #  critic assistant
 custom_dataset=$HOME/agentpo/rl_dataset.py
 return_raw_chat=False
+
+use_focal_weight=False
+use_balance_weight=False
+use_thres_weight=False
+focal_gamma=2.0
 
 python3 -m agentpo.main_dapo \
     data.train_files="${TRAIN_FILE}" \
@@ -101,7 +115,9 @@ python3 -m agentpo.main_dapo \
     algorithm.filter_groups.metric=${filter_groups_metric} \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.use_dynamic_bsz=${use_dynamic_bsz} \
+    actor_rollout_ref.actor.use_torch_compile=False \
     actor_rollout_ref.ref.log_prob_use_dynamic_bsz=${use_dynamic_bsz} \
+    actor_rollout_ref.ref.use_torch_compile=False \
     actor_rollout_ref.rollout.log_prob_use_dynamic_bsz=${use_dynamic_bsz} \
     actor_rollout_ref.actor.ppo_max_token_len_per_gpu=${actor_ppo_max_token_len} \
     actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=${infer_ppo_max_token_len} \
@@ -147,9 +163,9 @@ python3 -m agentpo.main_dapo \
     trainer.logger=['console','tensorboard'] \
     trainer.project_name="${project_name}" \
     trainer.experiment_name="${exp_name}" \
-    trainer.n_gpus_per_node=2 \
+    trainer.n_gpus_per_node=${n_gpus_per_node} \
     trainer.nnodes="${NNODES}" \
-    trainer.val_before_train=True \
+    trainer.val_before_train=False \
     trainer.test_freq=100 \
     trainer.save_freq=100 \
     trainer.total_epochs=1 \

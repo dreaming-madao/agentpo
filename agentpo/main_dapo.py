@@ -66,6 +66,7 @@ def run_ppo(config) -> None:
                     "NCCL_DEBUG": "WARN",
                     "VLLM_LOGGING_LEVEL": "WARN",
                     "VLLM_USE_V1": os.environ.get("VLLM_USE_V1", "0"),
+                    "SILICONFLOW_API_KEY": os.environ.get("SILICONFLOW_API_KEY", ""),
                     "DEBUG_RAY_WORKER": os.environ.get("DEBUG_RAY_WORKER", "0"),
                     "DEBUG_RAY_WORKER_PORT": os.environ.get("DEBUG_RAY_WORKER_PORT", "5678"),
                 }

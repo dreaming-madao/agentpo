@@ -16,7 +16,10 @@ venv/
 # IDE
 .idea/
 .vscode/
-
+.config/
+.codex
+.nv/
+.config/
 # ML / training artifacts
 wandb/
 runs/
@@ -34,5 +37,7 @@ Thumbs.db
 #output
 outputs/
 .triton/
+logs/
+metric/
 
 

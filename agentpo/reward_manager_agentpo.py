@@ -29,9 +29,13 @@ def get_solution(prompt_lst, actor_model,cooperation_mode):
         model = client.models.list().data[0].id
 
     else:
-        llm_model_base = "aliyuncs-api"
+        config = configs[actor_model]
+        if len(config) == 2:
+            llm_model_base = "aliyuncs-api"
+            model, openai_api_key = config
+        else:
+            llm_model_base, model, openai_api_key = config
         openai_api_base = llm_model_dict[llm_model_base]
-        model, openai_api_key = configs[actor_model]
         client = OpenAI(api_key=openai_api_key, base_url=openai_api_base)
 
     completions = []

@@ -40,8 +40,9 @@ llm_model_dict = {
     "Qwen3-4b": "http://174.34.106.20:10003/v1",
     "llm-grpo": "http://174.34.106.20:10060/v1",
     # "Llama-3.1-8B": "http://174.34.106.20:10003/v1",
-    "Llama-3.2-3B": "http://174.34.106.21:10005/v1",
-    "Llama-3.1-8B": "http://174.34.106.21:10005/v1",
+    "Llama-3.2-3B": "http://127.0.0.1:10005/v1",
+    "Llama-3.1-8B": "http://127.0.0.1:10006/v1",
+    "siliconflow-api": "https://api.siliconflow.cn/v1",
     "aliyuncs-api": "https://vpc-cn-beijing.dashscope.aliyuncs.com/compatible-mode/v1",
 }
 
@@ -50,6 +51,7 @@ configs = {
     "Qwen-plus-uaes-1206": ["qwen-plus", openai_api_key_ai_lab],
     "deepseek-r1-uaes-1206": ["deepseek-r1", openai_api_key_ai_lab],
     "deepseek-v3-uaes-1206": ["deepseek-v3", openai_api_key_ai_lab],
+    "DeepSeek-V3-SiliconFlow": ["siliconflow-api", "deepseek-ai/DeepSeek-V3", os.environ.get("SILICONFLOW_API_KEY", "")],
     "qwq-32b-preview-uaes-1206": ["qwq-32b-preview", openai_api_key_ai_lab],
 }
 
@@ -61,7 +63,9 @@ def parse_args():
     parser.add_argument("--data_names", default="aime24,math500,olympiadbench,minerva_math,amc23", type=str)
     parser.add_argument("--data_dir", default="/home/sunl/verl_rl/evaluate_math/evaluation/data", type=str)
     parser.add_argument("--model_name_or_path", default="/home/sunl/verl_rl/ckpts/Qwen2.5-3B-Instruct", type=str)
+    parser.add_argument("--exp_name", default=None, type=str)
     parser.add_argument("--output_dir", default="runs/hard1000_dapo_last", type=str)
+    parser.add_argument("--metrics_dir", default=None, type=str)
     parser.add_argument("--prompt_type", default="llama3", type=str)
     parser.add_argument("--split", default="test", type=str)
     parser.add_argument("--num_test_sample", default=-1, type=int)  # -1 for full data
@@ -75,6 +79,8 @@ def parse_args():
     parser.add_argument("--max_tokens_per_call", default=768, type=int)
     parser.add_argument("--shuffle", default=False)
     parser.add_argument("--use_vllm", default=True)
+    parser.add_argument("--api_only_actor", action="store_true", help="Skip loading the local hint model and evaluate only the actor API.")
+    parser.add_argument("--tokenizer_mode", default="auto", choices=["auto", "slow"], help="Tokenizer mode passed to vLLM.")
     parser.add_argument("--save_outputs", default=True)
     parser.add_argument("--overwrite",  default=True)
     parser.add_argument("--use_safetensors", default=False)
@@ -94,6 +100,8 @@ def parse_args():
     args.top_p = (
         1 if args.temperature == 0 else args.top_p
     )  # top_p must be 1 when using greedy sampling (vllm)
+    if args.api_only_actor:
+        args.apply_chat_template = False
     return args
 
 
@@ -108,9 +116,13 @@ def get_solution(prompt_lst, llm_model, cooperation_mode):
         model = client.models.list().data[0].id
 
     else:
-        llm_model_base = "aliyuncs-api"
+        config = configs[llm_model]
+        if len(config) == 2:
+            llm_model_base = "aliyuncs-api"
+            model, openai_api_key = config
+        else:
+            llm_model_base, model, openai_api_key = config
         openai_api_base = llm_model_dict[llm_model_base]
-        model, openai_api_key = configs[llm_model]
         client = OpenAI(api_key=openai_api_key, base_url=openai_api_base, timeout=6000)
 
     if cooperation_mode=="critic":
@@ -193,7 +205,7 @@ def prepare_data(data_name, args):
     model_name = "/".join(args.model_name_or_path.split("/")[-2:])
     out_file_prefix = f"{args.split}_{args.prompt_type}_{args.num_test_sample}_seed{args.seed}_t{args.temperature}"
     output_dir = args.output_dir
-    if not os.path.exists(output_dir):
+    if not os.path.isabs(output_dir) and not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"
     out_file = f"{output_dir}/{data_name}/{out_file_prefix}_s{args.start}_e{args.end}.jsonl"
     os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
@@ -220,10 +232,14 @@ def prepare_data(data_name, args):
 
 def setup(args):
     # load model
-    available_gpus = os.environ["CUDA_VISIBLE_DEVICES"].split(",")
-    if args.use_vllm:
+    available_gpus = os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",")
+    if args.api_only_actor:
+        llm = None
+        tokenizer = None
+    elif args.use_vllm:
         llm = LLM(
             model=args.model_name_or_path,
+            tokenizer_mode=args.tokenizer_mode,
             tensor_parallel_size=len(available_gpus) // args.pipeline_parallel_size,
             pipeline_parallel_size=args.pipeline_parallel_size,
             trust_remote_code=True,
@@ -236,7 +252,7 @@ def setup(args):
         tokenizer = None
         if args.apply_chat_template:
             tokenizer = AutoTokenizer.from_pretrained(
-                args.model_name_or_path, trust_remote_code=True
+                args.model_name_or_path, trust_remote_code=True, use_fast=args.tokenizer_mode != "slow"
             )
     else:
         llm, tokenizer = load_hf_lm_and_tokenizer(
@@ -270,9 +286,56 @@ def setup(args):
 
     # print all results
     pad = max([len(data_name) for data_name in data_list])
-    print("\t".join(data_name.ljust(pad, " ") for data_name in data_list))
-    print("\t".join([f"{result['acc']:.1f}".ljust(pad, " ") for result in results]))
-    print("\t".join([f"{cost_time:.1f}".ljust(pad, " ") for cost_time in cost_times]))
+    summary_lines = [
+        "\t".join(data_name.ljust(pad, " ") for data_name in data_list),
+        "\t".join([f"{result['acc']:.1f}".ljust(pad, " ") for result in results]),
+        "\t".join([f"{cost_time:.1f}".ljust(pad, " ") for cost_time in cost_times]),
+    ]
+    print("\n".join(summary_lines))
+
+    if args.metrics_dir:
+        os.makedirs(args.metrics_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        metrics_name = args.exp_name or os.path.basename(args.model_name_or_path.rstrip("/"))
+        metrics_file = os.path.join(
+            args.metrics_dir,
+            f"promptpo_{metrics_name}_{timestamp}.json",
+        )
+        metrics_payload = {
+            "timestamp": timestamp,
+            "exp_name": args.exp_name,
+            "hint_model": None if args.api_only_actor else args.model_name_or_path,
+            "actor_model": args.actor_model,
+            "cooperation_mode": args.cooperation_mode,
+            "api_only_actor": args.api_only_actor,
+            "data_names": args.data_names.split(","),
+            "data_dir": args.data_dir,
+            "output_dir": args.output_dir,
+            "prompt_type": args.prompt_type,
+            "split": args.split,
+            "num_test_sample": args.num_test_sample,
+            "seed": args.seed,
+            "start": args.start,
+            "end": args.end,
+            "temperature": args.temperature,
+            "top_p": args.top_p,
+            "top_k": args.top_k,
+            "n_sampling": args.n_sampling,
+            "max_tokens_per_call": args.max_tokens_per_call,
+            "use_pass_k": args.use_pass_k,
+            "results": {name: result for name, result in zip(data_list, results)},
+            "cost_times": {name: cost_time for name, cost_time in zip(data_list, cost_times)},
+        }
+        with open(metrics_file, "w", encoding="utf-8") as f:
+            json.dump(metrics_payload, f, indent=4, ensure_ascii=False)
+        print(f"Saved summary metrics to {metrics_file}")
+
+        metrics_txt_file = metrics_file.replace(".json", ".txt")
+        with open(metrics_txt_file, "w", encoding="utf-8") as f:
+            f.write("accuracy\n")
+            f.write("\n".join(summary_lines))
+            f.write("\n")
+        print(f"Saved summary table to {metrics_txt_file}")
 
 
 def is_multi_choice(answer):
@@ -371,6 +434,8 @@ def main(llm, tokenizer, data_name, args):
             ))
             for prompt in input_prompts
         ]
+    else:
+        input_prompts = [(prompt, prompt) for prompt in input_prompts]
 
     print(input_prompts[0][1])
 

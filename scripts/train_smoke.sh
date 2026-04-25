@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -e
+
+export PYTHONPATH=/home/ly/agentpo:$PYTHONPATH
+export HF_HOME=/mnt/huawei/leiy/hug
+export HF_HUB_CACHE=/mnt/huawei/leiy/hug/hub
+export HF_ASSETS_CACHE=/mnt/huawei/leiy/hug/assets
+export HF_TOKEN_PATH=/mnt/huawei/leiy/hug/token
+export VLLM_USE_V1=0
+
+project_name='AgentPO'
+exp_name='smoke_Qwen2.5-3B_Llama-3.2-3B'
+
+HOME="/home/ly/agentpo"
+CKPT_ROOT="/mnt/huawei/leiy/checkpoints/agentpo"
+CKPTS_DIR="${CKPT_ROOT}/${project_name}/${exp_name}"
+MODEL_PATH="Qwen/Qwen2.5-3B-Instruct"
+
+max_prompt_length=256
+max_response_length=384
+train_prompt_bsz=1
+gen_prompt_bsz=1
+n_resp_per_prompt=2
+train_prompt_mini_bsz=1
+dataset_num=4
+
+math_train_path=$HOME/data/math8k/math8k_hard_solutions_smoke.parquet
+math_test_path=$HOME/data/math8k/test_solutions_smoke.parquet
+
+TRAIN_FILE="['$math_train_path']"
+TEST_FILE="['$math_test_path']"
+
+python3 -m agentpo.main_dapo \
+    data.train_files="${TRAIN_FILE}" \
+    data.val_files="${TEST_FILE}" \
+    data.prompt_key=problem \
+    data.truncation='left' \
+    data.custom_cls.path=$HOME/agentpo/rl_dataset.py \
+    data.custom_cls.name='RLHFCustomDataset' \
+    data.dataset_num=${dataset_num} \
+    data.max_prompt_length=${max_prompt_length} \
+    data.max_response_length=${max_response_length} \
+    data.return_raw_chat=False \
+    data.gen_batch_size=${gen_prompt_bsz} \
+    data.train_batch_size=${train_prompt_bsz} \
+    actor_rollout_ref.rollout.n=${n_resp_per_prompt} \
+    algorithm.adv_estimator=grpo \
+    algorithm.cooperation_mode=assistant \
+    algorithm.use_kl_in_reward=False \
+    algorithm.kl_ctrl.kl_coef=0.0 \
+    actor_rollout_ref.actor.use_kl_loss=False \
+    actor_rollout_ref.actor.kl_loss_coef=0.0 \
+    actor_rollout_ref.actor.clip_ratio_low=0.2 \
+    actor_rollout_ref.actor.clip_ratio_high=0.28 \
+    actor_rollout_ref.actor.clip_ratio_c=10.0 \
+    algorithm.filter_groups.enable=False \
+    algorithm.filter_groups.max_num_gen_batches=10 \
+    algorithm.filter_groups.metric=acc \
+    actor_rollout_ref.model.use_remove_padding=True \
+    actor_rollout_ref.actor.use_dynamic_bsz=True \
+    actor_rollout_ref.actor.use_torch_compile=False \
+    actor_rollout_ref.ref.log_prob_use_dynamic_bsz=True \
+    actor_rollout_ref.ref.use_torch_compile=False \
+    actor_rollout_ref.rollout.log_prob_use_dynamic_bsz=True \
+    actor_rollout_ref.actor.ppo_max_token_len_per_gpu=$((max_prompt_length + max_response_length)) \
+    actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=$((max_prompt_length + max_response_length)) \
+    actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=$((max_prompt_length + max_response_length)) \
+    actor_rollout_ref.model.path="${MODEL_PATH}" \
+    actor_rollout_ref.model.enable_gradient_checkpointing=True \
+    actor_rollout_ref.actor.optim.lr=1e-6 \
+    actor_rollout_ref.actor.optim.lr_warmup_steps=1 \
+    actor_rollout_ref.actor.optim.weight_decay=0.1 \
+    actor_rollout_ref.actor.ppo_mini_batch_size=${train_prompt_mini_bsz} \
+    actor_rollout_ref.actor.fsdp_config.param_offload=True \
+    actor_rollout_ref.actor.fsdp_config.optimizer_offload=True \
+    actor_rollout_ref.actor.entropy_coeff=0 \
+    actor_rollout_ref.actor.grad_clip=1.0 \
+    actor_rollout_ref.actor.loss_agg_mode=token-mean \
+    actor_rollout_ref.actor.ulysses_sequence_parallel_size=1 \
+    actor_rollout_ref.actor.use_focal_weight=False \
+    actor_rollout_ref.actor.use_balance_weight=False \
+    actor_rollout_ref.actor.use_thres_weight=False \
+    actor_rollout_ref.actor.focal_gamma=2.0 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.enable_chunked_prefill=True \
+    actor_rollout_ref.rollout.max_num_batched_tokens=$((max_prompt_length + max_response_length)) \
+    actor_rollout_ref.rollout.temperature=1.0 \
+    actor_rollout_ref.rollout.top_p=1.0 \
+    actor_rollout_ref.rollout.top_k=-1 \
+    actor_rollout_ref.rollout.max_num_seqs=$((max_prompt_length + max_response_length)) \
+    actor_rollout_ref.rollout.val_kwargs.temperature=1.0 \
+    actor_rollout_ref.rollout.val_kwargs.top_p=0.7 \
+    actor_rollout_ref.rollout.val_kwargs.top_k=-1 \
+    actor_rollout_ref.rollout.val_kwargs.do_sample=True \
+    actor_rollout_ref.rollout.val_kwargs.n=1 \
+    actor_rollout_ref.ref.fsdp_config.param_offload=True \
+    actor_rollout_ref.ref.ulysses_sequence_parallel_size=1 \
+    actor_rollout_ref.actor.fsdp_config.fsdp_size=-1 \
+    custom_reward_function.path=$HOME/agentpo/reward_fn.py \
+    reward_model.reward_manager=agentpo \
+    reward_model.actor_model=Llama-3.2-3B \
+    reward_model.overlong_buffer.enable=False \
+    reward_model.overlong_buffer.len=4096 \
+    reward_model.overlong_buffer.penalty_factor=1.0 \
+    trainer.logger=['console','tensorboard'] \
+    trainer.project_name="${project_name}" \
+    trainer.experiment_name="${exp_name}" \
+    trainer.n_gpus_per_node=1 \
+    trainer.nnodes=1 \
+    trainer.val_before_train=False \
+    trainer.test_freq=100 \
+    trainer.save_freq=1 \
+    trainer.total_epochs=1 \
+    trainer.default_local_dir="${CKPTS_DIR}" \
+    trainer.resume_mode=disable

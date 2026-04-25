@@ -20,9 +20,15 @@ from latex2sympy2 import latex2sympy
 
 # from .parser import choice_answer_clean, strip_string
 # from parser import choice_answer_clean
-from math_verify.errors import TimeoutException
-from math_verify.metric import math_metric
-from math_verify.parser import ExprExtractionConfig, LatexExtractionConfig
+try:
+    from math_verify.errors import TimeoutException
+    from math_verify.metric import math_metric
+    from math_verify.parser import ExprExtractionConfig, LatexExtractionConfig
+except ImportError:
+    TimeoutException = Exception
+    math_metric = None
+    ExprExtractionConfig = None
+    LatexExtractionConfig = None
 # from .math_grader import boxed_reward_fn2
 
 def choice_answer_clean(pred: str):
@@ -271,6 +277,9 @@ def math_equal(
 
 
 def is_equal(model_output: str, ground_truth: str, timeout_score: float = 0) -> bool:
+    if math_metric is None:
+        return math_equal(model_output, ground_truth)
+
     verify_func = math_metric(
         gold_extraction_target=(LatexExtractionConfig(),),
         pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig()),

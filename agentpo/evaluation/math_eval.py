@@ -40,6 +40,7 @@ def parse_args():
     parser.add_argument("--max_tokens_per_call", default=2048, type=int)
     parser.add_argument("--shuffle", action="store_true")
     parser.add_argument("--use_vllm", action="store_true")
+    parser.add_argument("--tokenizer_mode", default="auto", choices=["auto", "slow"], help="Tokenizer mode passed to vLLM.")
     parser.add_argument("--save_outputs", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--use_safetensors", action="store_true")
@@ -86,7 +87,7 @@ def prepare_data(data_name, args):
     model_name = "/".join(args.model_name_or_path.split("/")[-2:])
     out_file_prefix = f"{args.split}_{args.prompt_type}_{args.num_test_sample}_seed{args.seed}_t{args.temperature}"
     output_dir = args.output_dir
-    if not os.path.exists(output_dir):
+    if not os.path.isabs(output_dir) and not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"
     out_file = f"{output_dir}/{data_name}/{out_file_prefix}_s{args.start}_e{args.end}.jsonl"
     os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
@@ -117,6 +118,7 @@ def setup(args):
     if args.use_vllm:
         llm = LLM(
             model=args.model_name_or_path,
+            tokenizer_mode=args.tokenizer_mode,
             tensor_parallel_size=len(available_gpus) // args.pipeline_parallel_size,
             pipeline_parallel_size=args.pipeline_parallel_size,
             trust_remote_code=True,

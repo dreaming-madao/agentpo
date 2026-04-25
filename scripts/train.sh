@@ -6,7 +6,7 @@ export HF_ASSETS_CACHE=/mnt/huawei/leiy/hug/assets
 export HF_TOKEN_PATH=/mnt/huawei/leiy/hug/token
 export VLLM_USE_V1=0
 project_name='AgentPO'
-exp_name='assistant_Qwen2.5-3B_Llama-3.2-3B_500'
+exp_name="${EXP_NAME:-assistant_Qwen2.5-3B_Llama-3.2-3B_500}"
 
 adv_estimator=grpo
 
@@ -54,7 +54,9 @@ CKPTS_DIR=${CKPT_ROOT}/${project_name}/${exp_name}
 # math_train_hard1000_path=$HOME/data/math8k/math8k_hard_1000.parquet
 # math_test_path=$HOME/data/math8k/test.parquet
 math_train_hard1000_path=$HOME/data/math8k/math8k_hard_solutions_1000.parquet
-math_test_path=$HOME/data/math8k/test_solutions.parquet
+# math_test_path=$HOME/data/math8k/test_solutions.parquet
+math_test_path=$HOME/data/math8k/test_solutions_50.parquet
+
 
 TRAIN_FILE="['$math_train_hard1000_path']"
 TEST_FILE="['$math_test_path']"
@@ -77,7 +79,7 @@ gen_tp=1
 # add focal weight
 dataset_num=500
 reward_manager=agentpo
-actor_model=Llama-3.2-3B # Llama-3.2-3B Llama-3.1-8B, Qwen2.5-7b, Qwen3-4b, Qwen-plus-uaes-1206
+actor_model="${ACTOR_MODEL:-Llama-3.2-3B}" # Llama-3.2-3B Llama-3.1-8B, Qwen2.5-7b, Qwen3-4b, Qwen-plus-uaes-1206
 cooperation_mode=assistant #  critic assistant
 custom_dataset=$HOME/agentpo/rl_dataset.py
 return_raw_chat=False

@@ -10,7 +10,7 @@ llm_model_dict = {
     "Llama-3.1-8B": "http://127.0.0.1:10006/v1",
     "Llama-3.2-3B": "http://127.0.0.1:10005/v1",
     "siliconflow-api": "https://api.siliconflow.cn/v1",
-    "aliyuncs-api": "https://vpc-cn-beijing.dashscope.aliyuncs.com/compatible-mode/v1",
+    "aliyuncs-api": "https://dashscope.aliyuncs.com/compatible-mode/v1",
 }
 
 configs = {
@@ -18,6 +18,8 @@ configs = {
     "Qwen-plus-uaes-1206": ["qwen-plus", openai_api_key],
     "deepseek-r1-uaes-1206": ["deepseek-r1", openai_api_key],
     "deepseek-v3-uaes-1206": ["deepseek-v3", openai_api_key],
+    "Qwen2.5-Math-7B-DashScope": ["qwen2.5-math-7b-instruct", os.environ.get("DASHSCOPE_API_KEY", "")],
+    "Qwen2.5-7B-SiliconFlow": ["siliconflow-api", "Qwen/Qwen2.5-7B-Instruct", os.environ.get("SILICONFLOW_API_KEY", "")],
     "DeepSeek-V3-SiliconFlow": ["siliconflow-api", "deepseek-ai/DeepSeek-V3", os.environ.get("SILICONFLOW_API_KEY", "")],
     "qwq-32b-preview-uaes-1206": ["qwq-32b-preview", openai_api_key]
 }

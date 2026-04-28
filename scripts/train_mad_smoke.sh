@@ -6,8 +6,9 @@ export HF_ASSETS_CACHE=/mnt/huawei/leiy/hug/assets
 export HF_TOKEN_PATH=/mnt/huawei/leiy/hug/token
 export VLLM_USE_V1=0
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-2,3}"
+
 project_name='AgentPO'
-exp_name="${EXP_NAME:-mad_api_full_Qwen2.5-3B_Qwen2.5-7B-SiliconFlow_500}"
+exp_name="${EXP_NAME:-mad_api_smoke_Qwen2.5-3B_Qwen2.5-Math-7B-DashScope}"
 
 adv_estimator=grpo
 
@@ -19,8 +20,8 @@ kl_loss_coef=0.0
 clip_ratio_low=0.2
 clip_ratio_high=0.28
 
-max_prompt_length=256    #  4096
-max_response_length=768  # 768, 1500, 2048, 4096
+max_prompt_length=256
+max_response_length=512
 enable_overlong_buffer=False
 overlong_buffer_len=$((1024 * 4))
 overlong_penalty_factor=1.0
@@ -28,47 +29,33 @@ overlong_penalty_factor=1.0
 loss_agg_mode="token-mean"
 enable_filter_groups=False
 filter_groups_metric=acc
-max_num_gen_batches=10
-train_prompt_bsz=4
-gen_prompt_bsz=$((train_prompt_bsz * 3))
-n_resp_per_prompt=16  # 4
-train_prompt_mini_bsz=4
+max_num_gen_batches=2
+train_prompt_bsz=2
+gen_prompt_bsz=2
+n_resp_per_prompt=1
+train_prompt_mini_bsz=2
 
-# Ray
 NNODES=1
 
-# Paths
 HOME="/home/ly/agentpo"
 REPO_ROOT="/home/ly/agentpo"
 CKPT_ROOT="/mnt/huawei/leiy/checkpoints/agentpo"
 
-## model
-# MODEL_PATH=$HOME/ckpts/Qwen_Qwen2.5-Math-7B
 MODEL_PATH="Qwen/Qwen2.5-3B-Instruct"
-# MODEL_PATH=$HOME/ckpts/Qwen_Qwen2.5-Math-1.5B
-# MODEL_PATH=$HOME/ckpts/unsloth_Llama-3.2-3B-Instruct
 
-# CKPTS_DIR=$HOME/runs/$project_name/$exp_name
 CKPTS_DIR=${CKPT_ROOT}/${project_name}/${exp_name}
 
-## data
-# math_train_hard1000_path=$HOME/data/math8k/math8k_hard_1000.parquet
-# math_test_path=$HOME/data/math8k/test.parquet
 math_train_hard1000_path=$HOME/data/math8k/math8k_hard_solutions_1000.parquet
-# math_test_path=$HOME/data/math8k/test_solutions.parquet
 math_test_path=$HOME/data/math8k/test_solutions_50.parquet
-
 
 TRAIN_FILE="['$math_train_hard1000_path']"
 TEST_FILE="['$math_test_path']"
 
-# Algorithm
 temperature=1.0
 top_p=1.0
-top_k=-1 # 0 for HF rollout, -1 for vLLM rollout
+top_k=-1
 val_top_p=0.7
 
-# Performance Related Parameter
 n_gpus_per_node=2
 sp_size=1
 use_dynamic_bsz=True
@@ -77,20 +64,21 @@ infer_ppo_max_token_len=$((max_prompt_length + max_response_length))
 offload=True
 gen_tp=1
 
-# add focal weight
-dataset_num=500
+dataset_num=8
 reward_manager=agentpo
-actor_model="${ACTOR_MODEL:-Qwen2.5-7B-SiliconFlow}" # Llama-3.2-3B Llama-3.1-8B, Qwen2.5-7b, Qwen3-4b, Qwen-plus-uaes-1206, Qwen2.5-7B-SiliconFlow
-cooperation_mode=mad # critic assistant mad
+actor_model="${ACTOR_MODEL:-Qwen2.5-Math-7B-DashScope}"
+cooperation_mode=mad
 mad_backend=api
 mad_vllm_model_path="${MAD_VLLM_MODEL_PATH:-${MODEL_PATH}}"
-mad_num_agents=3
-mad_debate_rounds=2
+mad_num_agents=2
+mad_debate_rounds=1
 mad_topology=full
 mad_multi_persona=False
+mad_max_tokens=512
+mad_max_peer_chars=600
 mad_parallel_agents=True
 mad_parallel_rollouts=False
-mad_max_concurrency=3
+mad_max_concurrency=2
 custom_dataset=$HOME/agentpo/rl_dataset.py
 return_raw_chat=False
 
@@ -121,6 +109,8 @@ python3 -m agentpo.main_dapo \
     +algorithm.mad.debate_rounds=${mad_debate_rounds} \
     +algorithm.mad.topology=${mad_topology} \
     +algorithm.mad.multi_persona=${mad_multi_persona} \
+    +algorithm.mad.max_tokens=${mad_max_tokens} \
+    +algorithm.mad.max_peer_chars=${mad_max_peer_chars} \
     +algorithm.mad.parallel_agents=${mad_parallel_agents} \
     +algorithm.mad.parallel_rollouts=${mad_parallel_rollouts} \
     +algorithm.mad.max_concurrency=${mad_max_concurrency} \
@@ -146,7 +136,7 @@ python3 -m agentpo.main_dapo \
     actor_rollout_ref.model.path="${MODEL_PATH}" \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.optim.lr=1e-6 \
-    actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
+    actor_rollout_ref.actor.optim.lr_warmup_steps=2 \
     actor_rollout_ref.actor.optim.weight_decay=0.1 \
     actor_rollout_ref.actor.ppo_mini_batch_size=${train_prompt_mini_bsz} \
     actor_rollout_ref.actor.fsdp_config.param_offload=${offload} \
@@ -159,7 +149,7 @@ python3 -m agentpo.main_dapo \
     actor_rollout_ref.actor.use_balance_weight=${use_balance_weight} \
     actor_rollout_ref.actor.use_thres_weight=${use_thres_weight} \
     actor_rollout_ref.actor.focal_gamma=${focal_gamma} \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.5 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.4 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=${gen_tp} \
     actor_rollout_ref.rollout.enable_chunked_prefill=True \
     actor_rollout_ref.rollout.max_num_batched_tokens=$((max_prompt_length + max_response_length)) \
@@ -187,8 +177,8 @@ python3 -m agentpo.main_dapo \
     trainer.n_gpus_per_node=${n_gpus_per_node} \
     trainer.nnodes="${NNODES}" \
     trainer.val_before_train=False \
-    trainer.test_freq=100 \
-    trainer.save_freq=100 \
+    trainer.test_freq=5 \
+    trainer.save_freq=20 \
     trainer.total_epochs=1 \
     trainer.default_local_dir="${CKPTS_DIR}" \
-    trainer.resume_mode=auto
+    trainer.resume_mode=disable

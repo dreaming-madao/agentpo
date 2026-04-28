@@ -28,6 +28,7 @@ TOP_P="${TOP_P:-1.0}"
 TOP_K="${TOP_K:--1}"
 MAX_TOKENS="${MAX_TOKENS:-2048}"
 MAX_K="${MAX_K:-1}"
+API_BATCH_SIZE="${API_BATCH_SIZE:-64}"
 USE_PASS_K="${USE_PASS_K:-False}"
 ACTOR_MODEL="${ACTOR_MODEL:-Llama-3.2-3B}"
 
@@ -37,6 +38,7 @@ echo "  data       : ${DATA_NAMES}"
 echo "  samples    : ${NUM_TEST_SAMPLE}"
 echo "  max_tokens : ${MAX_TOKENS}"
 echo "  n_sampling : ${MAX_K}"
+echo "  api_batch  : ${API_BATCH_SIZE}"
 echo "  output_dir : ${OUTPUT_DIR}"
 echo "  metrics_dir: ${METRICS_DIR}"
 
@@ -61,6 +63,7 @@ python -u agentpo/evaluation/math_eval_promptpo.py \
     --top_p "${TOP_P}" \
     --top_k "${TOP_K}" \
     --n_sampling "${MAX_K}" \
+    --api_batch_size "${API_BATCH_SIZE}" \
     --start "${START}" \
     --end "${END}" \
     --save_outputs True \

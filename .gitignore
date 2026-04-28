@@ -25,6 +25,7 @@ wandb/
 runs/
 checkpoints/
 *.ckpt
+ckpts/
 tensorboard/
 
 # Local data & large files (keep datasets outside the repo)
@@ -39,5 +40,6 @@ outputs/
 .triton/
 logs/
 metric/
+*.log
 
 

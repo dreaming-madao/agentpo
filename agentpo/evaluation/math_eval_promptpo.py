@@ -2,6 +2,7 @@ import random
 import os
 import argparse
 import time
+from concurrent.futures import ThreadPoolExecutor
 from vllm import LLM, SamplingParams
 from datetime import datetime
 from tqdm import tqdm
@@ -51,6 +52,7 @@ configs = {
     "Qwen-plus-uaes-1206": ["qwen-plus", openai_api_key_ai_lab],
     "deepseek-r1-uaes-1206": ["deepseek-r1", openai_api_key_ai_lab],
     "deepseek-v3-uaes-1206": ["deepseek-v3", openai_api_key_ai_lab],
+    "Qwen2.5-7B-SiliconFlow": ["siliconflow-api", "Qwen/Qwen2.5-7B-Instruct", os.environ.get("SILICONFLOW_API_KEY", "")],
     "DeepSeek-V3-SiliconFlow": ["siliconflow-api", "deepseek-ai/DeepSeek-V3", os.environ.get("SILICONFLOW_API_KEY", "")],
     "qwq-32b-preview-uaes-1206": ["qwq-32b-preview", openai_api_key_ai_lab],
 }
@@ -74,6 +76,7 @@ def parse_args():
     parser.add_argument("--end", default=5, type=int)
     parser.add_argument("--temperature", default=0, type=float)
     parser.add_argument("--n_sampling", default=1, type=int)
+    parser.add_argument("--api_batch_size", default=64, type=int, help="Number of API prompts to issue per batch.")
     parser.add_argument("--top_p", default=1, type=float)
     parser.add_argument("--top_k", default=-1, type=int)
     parser.add_argument("--max_tokens_per_call", default=768, type=int)
@@ -105,8 +108,8 @@ def parse_args():
     return args
 
 
-def get_solution(prompt_lst, llm_model, cooperation_mode):
-    BATCH_SIZE=64
+def get_solution(prompt_lst, llm_model, cooperation_mode, api_batch_size=64):
+    BATCH_SIZE = api_batch_size
     
     if llm_model in uaes_model_list:
         llm_model_base = llm_model
@@ -131,46 +134,82 @@ def get_solution(prompt_lst, llm_model, cooperation_mode):
     elif cooperation_mode in ["base", "assistant"]:
         system_prompt='Please reason step by step, and put your final answer within \\boxed{{}}.'
 
+    def request_one(item):
+        idx, raw_prompt, messages = item
+        prompt_start_time = time.time()
+        try:
+            completion = client.chat.completions.create(
+                messages=messages,
+                model=model,
+                stream=False,
+                max_tokens=2048,
+                temperature=0,
+                top_p=1.0,
+            )
+            response_item = completion.choices[0].message.content or ""
+            error = ""
+        except Exception as e:
+            print(f"Error processing a completion in batch: {e}")
+            response_item = ""
+            error = str(e)
+        return {
+            "idx": idx,
+            "prompt": raw_prompt,
+            "response": response_item,
+            "elapsed": time.time() - prompt_start_time,
+            "error": error,
+        }
+
     all_responses = []
 
     for i in range(0, len(prompt_lst), BATCH_SIZE):
         batch_prompts = prompt_lst[i:i + BATCH_SIZE]
-        print(f"Processing batch {i//BATCH_SIZE + 1}, prompts {i} to {min(i + BATCH_SIZE - 1, len(prompt_lst) - 1)}") 
+        batch_id = i // BATCH_SIZE + 1
+        batch_start_time = time.time()
+        print(f"Processing batch {batch_id}, prompts {i} to {min(i + BATCH_SIZE - 1, len(prompt_lst) - 1)}") 
         
-        batch_messages = []
+        batch_request_items = []
         for prompt in batch_prompts:
+            prompt_idx = i + len(batch_request_items)
             prompt += " Let's think step by step and output the final answer within \\boxed{{}}."
             messages = [
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': prompt}
             ]
-            batch_messages.append(messages)
+            batch_request_items.append((prompt_idx, prompt, messages))
 
-        batch_completions = []
-        for messages in batch_messages:
-            completion = client.chat.completions.create(
-                messages=messages,
-                model=model,
-                stream=True,
-                max_tokens=2048,
-                temperature=0,
-                top_p=1.0
+        with ThreadPoolExecutor(max_workers=len(batch_request_items)) as executor:
+            batch_results = list(executor.map(request_one, batch_request_items))
+
+        batch_responses = [item["response"] for item in batch_results]
+        prompt_elapsed_times = [item["elapsed"] for item in batch_results]
+
+        batch_elapsed = time.time() - batch_start_time
+        print(
+            f"Finished batch {batch_id}: {len(batch_request_items)} prompts collected in "
+            f"{batch_elapsed:.2f}s (avg {batch_elapsed / max(len(batch_request_items), 1):.2f}s/prompt)"
+        )
+        if prompt_elapsed_times:
+            print(
+                f"Prompt timing stats for batch {batch_id}: min={min(prompt_elapsed_times):.2f}s "
+                f"max={max(prompt_elapsed_times):.2f}s avg={sum(prompt_elapsed_times)/len(prompt_elapsed_times):.2f}s"
             )
-            batch_completions.append(completion)
-
-        batch_responses = []
-        for completion in batch_completions:
-            response_item = ""
-            try:
-                for chunk in completion: 
-                    content = chunk.choices[0].delta.content
-                    if content is not None:
-                        response_item += content
-            except Exception as e:
-                print(f"Error processing a completion in batch: {e}")
-                response_item = "" 
-            batch_responses.append(response_item)
-
+        failed_items = [item for item in batch_results if item["error"] or not item["response"].strip()]
+        if failed_items:
+            print(f"Batch {batch_id} unstable items: {len(failed_items)}")
+            for item in failed_items:
+                prompt_preview = item["prompt"].replace("\n", " ")[:200]
+                if item["error"]:
+                    print(
+                        f"[unstable][idx={item['idx']}] elapsed={item['elapsed']:.2f}s "
+                        f"error={item['error']}"
+                    )
+                else:
+                    print(
+                        f"[unstable][idx={item['idx']}] elapsed={item['elapsed']:.2f}s "
+                        f"error=empty_response"
+                    )
+                print(f"[unstable][prompt_preview] {prompt_preview}")
         all_responses.extend(batch_responses)
 
     return all_responses
@@ -321,6 +360,7 @@ def setup(args):
             "top_p": args.top_p,
             "top_k": args.top_k,
             "n_sampling": args.n_sampling,
+            "api_batch_size": args.api_batch_size,
             "max_tokens_per_call": args.max_tokens_per_call,
             "use_pass_k": args.use_pass_k,
             "results": {name: result for name, result in zip(data_list, results)},
@@ -531,7 +571,7 @@ def main(llm, tokenizer, data_name, args):
         else:
             prompt_lst = [current_prompt[1] for current_prompt in current_prompts]
         
-        outputs=get_solution(prompt_lst, args.actor_model, args.cooperation_mode)
+        outputs=get_solution(prompt_lst, args.actor_model, args.cooperation_mode, args.api_batch_size)
 
         for (i, question, query), output in zip(current_prompts, outputs):
             output = output.rstrip()

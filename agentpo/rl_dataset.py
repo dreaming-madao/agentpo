@@ -50,6 +50,15 @@ verification_system_prompt ="""Given a question and its current solution, analyz
 Do not rewrite the solution, only highlight issues. 
 """
 
+mad_system_prompt = """You are a debate coordinator for a multi-agent reasoning system.
+Given a math problem, produce a concise debate guide that helps several debaters solve it.
+Your guide should:
+1. identify the key mathematical subproblems;
+2. list likely pitfalls or shortcuts to avoid;
+3. suggest how agents should cross-check each other's reasoning;
+4. remind them to place the final answer within \\boxed{}.
+Do not fully solve the problem."""
+
 class RLHFCustomDataset(RLHFDataset):
     def _read_files_and_tokenize(self):
         dataframes = []
@@ -89,6 +98,10 @@ class RLHFCustomDataset(RLHFDataset):
             
             elif self.config["cooperation_mode"]=='assistant':
                 system_prompt=prompt_system
+            elif self.config["cooperation_mode"]=='mad':
+                system_prompt=mad_system_prompt
+            else:
+                raise RuntimeError(f"Unknown cooperation_mode: {self.config['cooperation_mode']}")
 
             messages=[
                 {'role':'system','content':system_prompt},

@@ -67,6 +67,7 @@ def run_ppo(config) -> None:
                     "VLLM_LOGGING_LEVEL": "WARN",
                     "VLLM_USE_V1": os.environ.get("VLLM_USE_V1", "0"),
                     "SILICONFLOW_API_KEY": os.environ.get("SILICONFLOW_API_KEY", ""),
+                    "DASHSCOPE_API_KEY": os.environ.get("DASHSCOPE_API_KEY", ""),
                     "DEBUG_RAY_WORKER": os.environ.get("DEBUG_RAY_WORKER", "0"),
                     "DEBUG_RAY_WORKER_PORT": os.environ.get("DEBUG_RAY_WORKER_PORT", "5678"),
                 }
@@ -187,6 +188,7 @@ class TaskRunner:
             raise NotImplementedError
 
         compute_score = get_custom_reward_fn(config)
+        mad_config = getattr(config.algorithm, "mad", None)
         reward_fn = reward_manager_cls(
             tokenizer=tokenizer,
             num_examine=0,
@@ -195,7 +197,8 @@ class TaskRunner:
             max_resp_len=config.data.max_response_length,
             overlong_buffer_cfg=config.reward_model.overlong_buffer,
             actor_model=config.reward_model.actor_model,
-            cooperation_mode=config.algorithm.cooperation_mode
+            cooperation_mode=config.algorithm.cooperation_mode,
+            mad_config=mad_config,
         )
 
         # Note that we always use function-based RM for validation
@@ -207,7 +210,8 @@ class TaskRunner:
             max_resp_len=config.data.max_response_length,
             overlong_buffer_cfg=config.reward_model.overlong_buffer,
             actor_model=config.reward_model.actor_model,
-            cooperation_mode=config.algorithm.cooperation_mode
+            cooperation_mode=config.algorithm.cooperation_mode,
+            mad_config=mad_config,
         )
         resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
 

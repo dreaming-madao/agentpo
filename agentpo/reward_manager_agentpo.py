@@ -13,19 +13,23 @@
 # limitations under the License.
 
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 import torch
 from openai import OpenAI
+from omegaconf import OmegaConf
 from verl import DataProto
 from verl.utils.reward_score import _default_compute_score
 from .llm_fn import llm_model_dict, configs, local_model_list
+from .debate import MADConfig, run_mad
 
-def get_solution(prompt_lst, actor_model,cooperation_mode):
+
+def _get_client_and_model(actor_model):
     if actor_model in local_model_list:
         llm_model_base = actor_model
         openai_api_base = llm_model_dict[llm_model_base]
         openai_api_key = "empty"
-        client = OpenAI(api_key=openai_api_key, base_url=openai_api_base)
+        client = OpenAI(api_key=openai_api_key, base_url=openai_api_base, timeout=6000)
         model = client.models.list().data[0].id
 
     else:
@@ -36,43 +40,56 @@ def get_solution(prompt_lst, actor_model,cooperation_mode):
         else:
             llm_model_base, model, openai_api_key = config
         openai_api_base = llm_model_dict[llm_model_base]
-        client = OpenAI(api_key=openai_api_key, base_url=openai_api_base)
+        client = OpenAI(api_key=openai_api_key, base_url=openai_api_base, timeout=6000)
+    return client, model
 
-    completions = []
-    
+
+def build_actor_prompt(problem: str, collaborator_signal: str, cooperation_mode: str, solution=None) -> str:
+    if cooperation_mode == "assistant":
+        return f"Problem: {problem} (Hint: {collaborator_signal})"
+    if cooperation_mode == "critic":
+        return f"Problem: {problem}\n\nCurrent Solution: {solution}\n\nComment: {collaborator_signal}"
+    raise RuntimeError(f"Unsupported cooperation_mode for actor prompt: {cooperation_mode}")
+
+
+def get_solution(prompt_lst, actor_model, cooperation_mode):
+    client, model = _get_client_and_model(actor_model)
+    if cooperation_mode == "critic":
+        system_prompt = (
+            "You have an opportunity to improve your solution. Please review Current Solution and "
+            "Comment carefully. Correct errors and fill justification gaps if any."
+        )
+    elif cooperation_mode == "assistant":
+        system_prompt = "Please reason step by step, and put your final answer within \\boxed{{}}."
+    else:
+        raise RuntimeError(f"Unsupported cooperation_mode for get_solution: {cooperation_mode}")
+
+    responses = []
     for prompt in prompt_lst:
-        if cooperation_mode=="critic":
-            system_prompt='You have an opportunity to improve your solution. Please review Current Solution and Comment carefully. Correct errors and fill justification gaps if any.'
-        
-        elif cooperation_mode=="assistant":
-            system_prompt='Please reason step by step, and put your final answer within \\boxed{{}}.'
-
-        prompt+=" Let's think step by step and output the final answer within \\boxed{{}}."
-        messages=[
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': prompt}
-            ]
-
+        prompt += " Let's think step by step and output the final answer within \\boxed{{}}."
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ]
         completion = client.chat.completions.create(
             messages=messages,
             model=model,
-            stream=True,
+            stream=False,
             max_tokens=2048,
             temperature=0,
             top_p=1.0,
             timeout=6000,
         )
-        completions.append(completion)
+        response_item = completion.choices[0].message.content or ""
+        responses.append(response_item)
+    return responses
 
-    response = []
-    for completion in completions:
-        response_item = ""
-        for _ in completion:
-            resp = _.choices[0].delta.content
-            if resp is not None:
-                response_item += _.choices[0].delta.content 
-        response.append(response_item)
-    return response
+
+def _preview_text(text: str, max_chars: int = 240) -> str:
+    text = " ".join((text or "").split())
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "..."
 
 
 class AgentPORewardManager:
@@ -87,7 +104,8 @@ class AgentPORewardManager:
         max_resp_len=None,
         overlong_buffer_cfg=None,
         actor_model="",
-        cooperation_mode=""
+        cooperation_mode="",
+        mad_config=None,
     ) -> None:
         self.tokenizer = tokenizer
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
@@ -98,6 +116,13 @@ class AgentPORewardManager:
 
         self.actor_model=actor_model
         self.cooperation_mode=cooperation_mode
+        if mad_config is None:
+            mad_config_dict = {}
+        elif OmegaConf.is_config(mad_config):
+            mad_config_dict = OmegaConf.to_container(mad_config, resolve=True)
+        else:
+            mad_config_dict = dict(mad_config)
+        self.mad_config = MADConfig(**mad_config_dict)
 
         if self.overlong_buffer_cfg is not None:
             assert self.max_resp_len is not None, f"max_resp_len must be provided if {overlong_buffer_cfg=}, but got None"
@@ -119,7 +144,7 @@ class AgentPORewardManager:
         reward_extra_info = defaultdict(list)
 
         already_print_data_sources = {}
-        res_lst,prompt_lst=[],[]
+        items = []
         for i in range(len(data)):
             data_item = data[i]  # DataProtoItem
 
@@ -146,31 +171,86 @@ class AgentPORewardManager:
             extra_info = data_item.non_tensor_batch.get("extra_info", None)
 
             problem = data_item.non_tensor_batch["problem"]
+            items.append(
+                {
+                    "idx": i,
+                    "prompt_str": prompt_str,
+                    "problem": problem,
+                    "collab_signal": response_str,
+                    "data_source": data_source,
+                    "ground_truth": ground_truth,
+                    "extra_info": extra_info,
+                    "valid_response_length": valid_response_length,
+                    "solution": data_item.non_tensor_batch.get("solutions", None),
+                }
+            )
 
-            res_lst.append([prompt_str,data_source,ground_truth,extra_info,valid_response_length])
-
-            # In assistant mode, the actor's response is treated as a hint for
-            # the collaborator model. In critic mode, it is treated as feedback
-            # on an existing solution.
-            if self.cooperation_mode=="assistant":
-                prompt=f"Problem: {problem} (Hint: {response_str})"
-
-            elif self.cooperation_mode=="critic":
-                solution=data_item.non_tensor_batch['solutions']
-                prompt=f"Problem: {problem}\n\nCurrent Solution: {solution}\n\nComment: {response_str}"
-
+        final_solutions = []
+        histories = []
+        if self.cooperation_mode in {"assistant", "critic"}:
+            prompt_lst = []
+            for item in items:
+                prompt_lst.append(
+                    build_actor_prompt(
+                        problem=item["problem"],
+                        collaborator_signal=item["collab_signal"],
+                        cooperation_mode=self.cooperation_mode,
+                        solution=item["solution"],
+                    )
+                )
+            final_solutions = get_solution(prompt_lst, self.actor_model, self.cooperation_mode)
+            histories = [None] * len(final_solutions)
+        elif self.cooperation_mode == "mad":
+            if self.mad_config.parallel_rollouts and len(items) > 1:
+                max_workers = min(len(items), self.mad_config.max_concurrency)
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    results = list(
+                        executor.map(
+                            lambda item: run_mad(
+                                problem=item["problem"],
+                                collaborator_signal=item["collab_signal"],
+                                actor_model=self.actor_model,
+                                cfg=self.mad_config,
+                            ),
+                            items,
+                        )
+                    )
+                for item, (final_solution, history) in zip(items, results):
+                    final_solutions.append(final_solution)
+                    histories.append(history)
+                    print(
+                        "[mad_success] "
+                        f"idx={item['idx']} "
+                        f"rounds={len(history.get('rounds', [])) if history else 0} "
+                        f"final={_preview_text(final_solution)}",
+                        flush=True,
+                    )
             else:
-                raise RuntimeError(f"cooperation_mode is not defined.")
-            
-            prompt_lst.append(prompt)
+                for item in items:
+                    final_solution, history = run_mad(
+                        problem=item["problem"],
+                        collaborator_signal=item["collab_signal"],
+                        actor_model=self.actor_model,
+                        cfg=self.mad_config,
+                    )
+                    final_solutions.append(final_solution)
+                    histories.append(history)
+                    print(
+                        "[mad_success] "
+                        f"idx={item['idx']} "
+                        f"rounds={len(history.get('rounds', [])) if history else 0} "
+                        f"final={_preview_text(final_solution)}",
+                        flush=True,
+                    )
+        else:
+            raise RuntimeError(f"cooperation_mode is not defined: {self.cooperation_mode}")
 
-        # Ask the configured collaborator model/API to produce final solutions
-        # from the AgentPO prompts built above.
-        response_str_lst=get_solution(prompt_lst, self.actor_model,self.cooperation_mode)
-
-        for i, res in enumerate(res_lst):
-            prompt_str,data_source,ground_truth,extra_info,valid_response_length=res
-            response_str=response_str_lst[i]
+        for item, response_str, history in zip(items, final_solutions, histories):
+            prompt_str = item["prompt_str"]
+            data_source = item["data_source"]
+            ground_truth = item["ground_truth"]
+            extra_info = item["extra_info"]
+            valid_response_length = item["valid_response_length"]
 
             # Convert the collaborator's final answer into a scalar score.
             result = self.compute_score(
@@ -191,7 +271,7 @@ class AgentPORewardManager:
             reward = score
             # Put the sequence reward on the last valid token so downstream
             # PPO/GRPO code can consume it as token-level rewards.
-            reward_tensor[i, valid_response_length - 1] = reward
+            reward_tensor[item["idx"], valid_response_length - 1] = reward
 
             if data_source not in already_print_data_sources:
                 already_print_data_sources[data_source] = 0
@@ -207,6 +287,11 @@ class AgentPORewardManager:
                         print(f"[{key}]", value)
                 else:
                     print("[score]", score)
+                if history is not None:
+                    print("[mad_aggregation]", history.get("aggregation", {}))
+
+            if history is not None:
+                reward_extra_info["mad_history"].append(history)
 
         # Training asks for both the reward tensor and logging extras, while
         # validation may only need the reward tensor.

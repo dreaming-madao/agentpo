@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-export PYTHONPATH=/home/ly/agentpo:$PYTHONPATH
+export PYTHONPATH=/home/ly/agentpo:${PYTHONPATH:-}
 export HF_HOME=/mnt/huawei/leiy/hug
 export HF_HUB_CACHE=/mnt/huawei/leiy/hug/hub
 export HF_ASSETS_CACHE=/mnt/huawei/leiy/hug/assets
 export HF_TOKEN_PATH=/mnt/huawei/leiy/hug/token
 export VLLM_USE_V1=0
 
-project_name='AgentPO'
+project_name="AgentPO"
 actor_model="${ACTOR_MODEL:-Qwen2.5-Math-7B-DashScope}"
-exp_name="${EXP_NAME:-smoke_Qwen2.5-3B_${actor_model}}"
+exp_name="${EXP_NAME:-api_smoke_Qwen2.5-3B_${actor_model}}"
 
-HOME="/home/ly/agentpo"
+HOME_DIR="/home/ly/agentpo"
 CKPT_ROOT="/mnt/huawei/leiy/checkpoints/agentpo"
 CKPTS_DIR="${CKPT_ROOT}/${project_name}/${exp_name}"
-MODEL_PATH="Qwen/Qwen2.5-3B-Instruct"
+MODEL_PATH="${MODEL_PATH:-Qwen/Qwen2.5-3B-Instruct}"
 
 if [[ -z "${DASHSCOPE_API_KEY:-}" ]]; then
     echo "DASHSCOPE_API_KEY is required for actor_model=${actor_model}" >&2
@@ -25,38 +25,36 @@ fi
 
 max_prompt_length=256
 max_response_length=256
-
-train_prompt_bsz=4
-gen_prompt_bsz=$((train_prompt_bsz * 3))
-n_resp_per_prompt=16  # 4
-train_prompt_mini_bsz=4
-
-dataset_num="${DATASET_NUM:-32}"
+train_prompt_bsz=2
+gen_prompt_bsz=2
+n_resp_per_prompt=2
+train_prompt_mini_bsz=2
+dataset_num="${DATASET_NUM:-16}"
 total_epochs="${TOTAL_EPOCHS:-2}"
 test_freq="${TEST_FREQ:-100}"
 save_freq="${SAVE_FREQ:-4}"
 
-math_train_path="${TRAIN_PATH:-$HOME/data/math8k/math8k_hard_solutions_1000.parquet}"
-math_test_path="${TEST_PATH:-$HOME/data/math8k/test_solutions_50.parquet}"
+math_train_path="${TRAIN_PATH:-${HOME_DIR}/data/math8k/math8k_hard_solutions_1000.parquet}"
+math_test_path="${TEST_PATH:-${HOME_DIR}/data/math8k/test_solutions_50.parquet}"
 
-TRAIN_FILE="['$math_train_path']"
-TEST_FILE="['$math_test_path']"
+TRAIN_FILE="['${math_train_path}']"
+TEST_FILE="['${math_test_path}']"
 
 python3 -m agentpo.main_dapo \
     data.train_files="${TRAIN_FILE}" \
     data.val_files="${TEST_FILE}" \
     data.prompt_key=problem \
-    data.truncation='left' \
-    data.custom_cls.path=$HOME/agentpo/rl_dataset.py \
-    data.custom_cls.name='RLHFCustomDataset' \
-    data.dataset_num=${dataset_num} \
-    data.max_prompt_length=${max_prompt_length} \
-    data.max_response_length=${max_response_length} \
+    data.truncation=left \
+    data.custom_cls.path="${HOME_DIR}/agentpo/rl_dataset.py" \
+    data.custom_cls.name=RLHFCustomDataset \
+    data.dataset_num="${dataset_num}" \
+    data.max_prompt_length="${max_prompt_length}" \
+    data.max_response_length="${max_response_length}" \
     data.return_raw_chat=False \
-    data.gen_batch_size=${gen_prompt_bsz} \
-    data.train_batch_size=${train_prompt_bsz} \
+    data.gen_batch_size="${gen_prompt_bsz}" \
+    data.train_batch_size="${train_prompt_bsz}" \
     ray_init.num_cpus=8 \
-    actor_rollout_ref.rollout.n=${n_resp_per_prompt} \
+    actor_rollout_ref.rollout.n="${n_resp_per_prompt}" \
     algorithm.adv_estimator=grpo \
     algorithm.cooperation_mode=assistant \
     algorithm.use_kl_in_reward=False \
@@ -67,7 +65,7 @@ python3 -m agentpo.main_dapo \
     actor_rollout_ref.actor.clip_ratio_high=0.28 \
     actor_rollout_ref.actor.clip_ratio_c=10.0 \
     algorithm.filter_groups.enable=False \
-    algorithm.filter_groups.max_num_gen_batches=10 \
+    algorithm.filter_groups.max_num_gen_batches=4 \
     algorithm.filter_groups.metric=acc \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.use_dynamic_bsz=True \
@@ -75,15 +73,15 @@ python3 -m agentpo.main_dapo \
     actor_rollout_ref.ref.log_prob_use_dynamic_bsz=True \
     actor_rollout_ref.ref.use_torch_compile=False \
     actor_rollout_ref.rollout.log_prob_use_dynamic_bsz=True \
-    actor_rollout_ref.actor.ppo_max_token_len_per_gpu=$((max_prompt_length + max_response_length)) \
-    actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=$((max_prompt_length + max_response_length)) \
-    actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=$((max_prompt_length + max_response_length)) \
+    actor_rollout_ref.actor.ppo_max_token_len_per_gpu="$((max_prompt_length + max_response_length))" \
+    actor_rollout_ref.ref.log_prob_max_token_len_per_gpu="$((max_prompt_length + max_response_length))" \
+    actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu="$((max_prompt_length + max_response_length))" \
     actor_rollout_ref.model.path="${MODEL_PATH}" \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.actor.optim.lr_warmup_steps=1 \
     actor_rollout_ref.actor.optim.weight_decay=0.1 \
-    actor_rollout_ref.actor.ppo_mini_batch_size=${train_prompt_mini_bsz} \
+    actor_rollout_ref.actor.ppo_mini_batch_size="${train_prompt_mini_bsz}" \
     actor_rollout_ref.actor.fsdp_config.param_offload=True \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=True \
     actor_rollout_ref.actor.entropy_coeff=0 \
@@ -97,7 +95,7 @@ python3 -m agentpo.main_dapo \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.35 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.enable_chunked_prefill=True \
-    actor_rollout_ref.rollout.max_num_batched_tokens=$((max_prompt_length + max_response_length)) \
+    actor_rollout_ref.rollout.max_num_batched_tokens="$((max_prompt_length + max_response_length))" \
     actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.top_p=1.0 \
     actor_rollout_ref.rollout.top_k=-1 \
@@ -110,7 +108,7 @@ python3 -m agentpo.main_dapo \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     actor_rollout_ref.ref.ulysses_sequence_parallel_size=1 \
     actor_rollout_ref.actor.fsdp_config.fsdp_size=-1 \
-    custom_reward_function.path=$HOME/agentpo/reward_fn.py \
+    custom_reward_function.path="${HOME_DIR}/agentpo/reward_fn.py" \
     reward_model.reward_manager=agentpo \
     reward_model.actor_model="${actor_model}" \
     reward_model.overlong_buffer.enable=False \

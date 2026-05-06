@@ -64,7 +64,7 @@ def get_solution(prompt_lst, actor_model, cooperation_mode):
     else:
         raise RuntimeError(f"Unsupported cooperation_mode for get_solution: {cooperation_mode}")
 
-    responses = []
+    completions = []
     for prompt in prompt_lst:
         prompt += " Let's think step by step and output the final answer within \\boxed{{}}."
         messages = [
@@ -74,13 +74,21 @@ def get_solution(prompt_lst, actor_model, cooperation_mode):
         completion = client.chat.completions.create(
             messages=messages,
             model=model,
-            stream=False,
+            stream=True,
             max_tokens=2048,
             temperature=0,
             top_p=1.0,
             timeout=6000,
         )
-        response_item = completion.choices[0].message.content or ""
+        completions.append(completion)
+
+    responses = []
+    for completion in completions:
+        response_item = ""
+        for chunk in completion:
+            delta = chunk.choices[0].delta.content
+            if delta is not None:
+                response_item += delta
         responses.append(response_item)
     return responses
 

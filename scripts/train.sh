@@ -7,7 +7,17 @@ export HF_TOKEN_PATH=/mnt/huawei/leiy/hug/token
 export VLLM_USE_V1=0
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-2,3}"
 project_name='AgentPO'
-exp_name="${EXP_NAME:-mad_api_full_Qwen2.5-3B_Qwen2.5-7B-SiliconFlow_500}"
+actor_model="${ACTOR_MODEL:-Qwen2.5-Math-7B-DashScope}" # Ali DashScope API. Other options: Qwen-plus-uaes-1206, Qwen2.5-7B-SiliconFlow, Llama-3.2-3B
+actor_model_slug="${actor_model//\//_}"
+exp_name="${EXP_NAME:-mad_api_full_Qwen2.5-3B_${actor_model_slug}_500}"
+
+if [[ "${actor_model}" == *"DashScope"* || "${actor_model}" == *"uaes-1206"* ]]; then
+    if [[ -z "${DASHSCOPE_API_KEY:-}" ]]; then
+        echo "DASHSCOPE_API_KEY is required for actor_model=${actor_model}" >&2
+        echo "Example: export DASHSCOPE_API_KEY=your_api_key" >&2
+        exit 1
+    fi
+fi
 
 adv_estimator=grpo
 
@@ -80,7 +90,6 @@ gen_tp=1
 # add focal weight
 dataset_num=500
 reward_manager=agentpo
-actor_model="${ACTOR_MODEL:-Qwen2.5-7B-SiliconFlow}" # Llama-3.2-3B Llama-3.1-8B, Qwen2.5-7b, Qwen3-4b, Qwen-plus-uaes-1206, Qwen2.5-7B-SiliconFlow
 cooperation_mode=mad # critic assistant mad
 mad_backend=api
 mad_vllm_model_path="${MAD_VLLM_MODEL_PATH:-${MODEL_PATH}}"
